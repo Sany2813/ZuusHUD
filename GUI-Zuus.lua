@@ -59,6 +59,12 @@ BTW.Enabled = false
 BTW.MP = 0
 BTW.TPIndex = 0
 
+-- Wrap --
+
+local Wrap = require("scripts.modules.WrapUtility")
+
+-- /\ Wrap /\ --
+
 BTW.CastTypes  = {
 	["item_blink"] = 3,
 	["item_veil_of_discord"] = 3,
@@ -138,15 +144,10 @@ end
 
 function BTW.Combo()
 	if not BTW.Enabled then return end
-	
     local enemy = Input.GetNearestHeroToCursor(Entity.GetTeamNum(BTW.Hero), Enum.TeamType.TEAM_ENEMY)
-	
     if not enemy or not NPC.IsPositionInRange(enemy, Input.GetWorldCursorPos(), GUI.Get(BTW.Identity .. "closest"), 0) then return end
-	
 	local ordercast = GUI.Get(BTW.Identity .. "ordercombo", 1)
-	
 	if ordercast == nil then return end
-	
     local position = Entity.GetAbsOrigin(enemy)   
 	
 	local prevcast = nil
@@ -168,7 +169,7 @@ end
 
 function BTW.OnParticleUpdate(p)
 	if BTW.TPIndex == p.index then
-		local a = NPCs.InRadius(p.position, 50, Entity.GetTeamNum(BTW.Hero), Enum.TeamType.TEAM_FRIEND)
+		local a = Wrap.NInRadius(p.position, 50, Entity.GetTeamNum(BTW.Hero), Enum.TeamType.TEAM_FRIEND)
 		if (not a or #a == 0) and GUI.IsEnabled(BTW.Identity .. "interrupt_fog") and BTW.Enabled and p.position:Length2D() > 2 then 
 			BTW.Cast('zuus_cloud', BTW.Hero, nil, p.position, BTW.MP) 
 		end
@@ -184,7 +185,7 @@ function BTW.Steal()
 	local isInterrupt = GUI.IsEnabled(BTW.Identity .. "interrupt")
 
 	for n, npc in pairs(Heroes.GetAll()) do	
-		if not Entity.IsDormant(npc) and Entity.IsAlive(npc) and not NPC.IsIllusion(npc) and not Entity.IsSameTeam(BTW.Hero, npc) and not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE) then
+		if not Entity.IsDormant(npc) and Wrap.EIsAlive(npc) and not NPC.IsIllusion(npc) and not Entity.IsSameTeam(BTW.Hero, npc) and not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE) then
 		
 			if isInterrupt and NPC.IsChannellingAbility(npc) or NPC.HasModifier(npc, "modifier_teleporting") then
 				if	NPC.IsEntityInRange(BTW.Hero, npc, Ability.GetCastRange(BTW.Abilitys['zuus_lightning_bolt'])) 
@@ -268,7 +269,7 @@ function BTW.Initialize()
 	BTW.Hero = Heroes.GetLocal()
 	if BTW.Hero == nil then return end
 	if NPC.GetUnitName(BTW.Hero) ~= "npc_dota_hero_zuus" then return end
-	if not Entity.IsAlive(BTW.Hero) then return end
+	if not Wrap.EIsAlive(BTW.Hero) then return end
     BTW.MP = NPC.GetMana(BTW.Hero)
 	BTW.Enabled = true
 
@@ -294,33 +295,24 @@ end
 
 function BTW.Farm()
 	if not BTW.Enabled then return end
-	local UnitsInRadius = Entity.GetUnitsInRadius(BTW.Hero, Ability.GetCastRange(BTW.Abilitys['zuus_arc_lightning']), Enum.TeamType.TEAM_ENEMY) or {}
-	
-	for n, npc in pairs(UnitsInRadius) do	
-		if Entity.IsEntity(npc) and Entity.IsAlive(npc) and NPC.IsCreep(npc) then
-			local lightdmg = BTW.ArcDMG + (Entity.GetHealth(npc) * (BTW.StaticDMG / 100) )
-			
-			if	not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
-				and (Entity.GetHealth(npc) < (lightdmg * NPC.GetMagicalArmorDamageMultiplier(npc)))
-			then
-				BTW.Cast('zuus_arc_lightning', BTW.Hero, npc, nil, BTW.MP)
-				return
-			end
+	for n, npc in pairs(Wrap.UnitsInRadius(BTW.Hero, Ability.GetCastRange(BTW.Abilitys['zuus_arc_lightning']), Enum.TeamType.TEAM_ENEMY)) do	
+		local lightdmg = BTW.ArcDMG + (Entity.GetHealth(npc) * (BTW.StaticDMG / 100) )
+		
+		if	not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
+			and (Entity.GetHealth(npc) < (lightdmg * NPC.GetMagicalArmorDamageMultiplier(npc)))
+		then
+			BTW.Cast('zuus_arc_lightning', BTW.Hero, npc, nil, BTW.MP)
 		end
 	end
 end
 
 function BTW.Spam()
 	if not BTW.Enabled then return end
-	local UnitsInRadius = Entity.GetUnitsInRadius(BTW.Hero, Ability.GetCastRange(BTW.Abilitys['zuus_arc_lightning']), Enum.TeamType.TEAM_ENEMY) or {}
-
-	for n, npc in pairs(UnitsInRadius) do
-		if Entity.IsEntity(npc) and Entity.IsAlive(npc)	then
-			if	not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
-			then
-				BTW.Cast('zuus_arc_lightning', BTW.Hero, npc, nil, BTW.MP)
-			return end
-		end
+	for n, npc in pairs(Wrap.UnitsInRadius(BTW.Hero, Ability.GetCastRange(BTW.Abilitys['zuus_arc_lightning']), Enum.TeamType.TEAM_ENEMY)) do	
+		if	not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
+		then
+			BTW.Cast('zuus_arc_lightning', BTW.Hero, npc, nil, BTW.MP)
+		return end
 	end
 end
 
@@ -357,7 +349,7 @@ function BTW.Cast(name, self, npc, position, manapoint)
 			elseif casttype == 2 then Ability.CastTarget(ability, npc)
 			else Ability.CastPosition(ability, position)
 		end
-		GUI.Sleep(BTW.Identity .. "casted", Ability.GetCastPoint(ability) + NetChannel.GetAvgLatency(Enum.Flow.FLOW_OUTGOING) +0.1)
+		GUI.Sleep(BTW.Identity .. "casted", Ability.GetCastPoint(ability) + NetChannel.GetAvgLatency(Enum.Flow.FLOW_OUTGOING))
 	end
 end
 
