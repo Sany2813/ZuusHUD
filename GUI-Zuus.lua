@@ -295,10 +295,11 @@ end
 
 function BTW.Farm()
 	if not BTW.Enabled then return end
+
 	for n, npc in pairs(Wrap.UnitsInRadius(BTW.Hero, Ability.GetCastRange(BTW.Abilitys['zuus_arc_lightning']), Enum.TeamType.TEAM_ENEMY)) do	
 		local lightdmg = BTW.ArcDMG + (Entity.GetHealth(npc) * (BTW.StaticDMG / 100) )
 		
-		if	not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
+		if	NPC.IsCreep(npc) and not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
 			and (Entity.GetHealth(npc) < (lightdmg * NPC.GetMagicalArmorDamageMultiplier(npc)))
 		then
 			BTW.Cast('zuus_arc_lightning', BTW.Hero, npc, nil, BTW.MP)
@@ -309,7 +310,7 @@ end
 function BTW.Spam()
 	if not BTW.Enabled then return end
 	for n, npc in pairs(Wrap.UnitsInRadius(BTW.Hero, Ability.GetCastRange(BTW.Abilitys['zuus_arc_lightning']), Enum.TeamType.TEAM_ENEMY)) do	
-		if	not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
+		if (NPC.IsCreep(npc) or NPC.IsHero(npc)) and not NPC.HasState(npc, Enum.ModifierState.MODIFIER_STATE_MAGIC_IMMUNE)
 		then
 			BTW.Cast('zuus_arc_lightning', BTW.Hero, npc, nil, BTW.MP)
 		return end
